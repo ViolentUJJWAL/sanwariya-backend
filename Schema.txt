@@ -1,4 +1,4 @@
-Payment scheme :
+Payment schema :
     Payment by : ID
     Payment method : Enum[uip, card, COD], String
     Payment info: cardnumber, upi id
@@ -35,7 +35,7 @@ Order schema :
 Product schema :
     Title : String
     Desc : String(HTML Format)
-    Image : files, []
+    Images : files, []
     Stock, Number
     Color: String
     Size (Array) (optional) : []
@@ -43,13 +43,14 @@ Product schema :
     Reviews : Rating Schema
     Label (best seller, people's choice) : Enum[best seller, people's choice, Trending]
     Tag : String
-
+    Category: String
 
 Rating schema :
     rating : []
     Desc (review optional) : String
     Image(optional) : files, []
-
+    UserID: ID
+    isVerifiedPurchased: Boolean
 
 Admin schema :
     Name : String
@@ -65,4 +66,5 @@ User schema :
     Wishlist : [produce ID]
     Cart : [{product ID, quantity}]
     Address (array)(street, flat no, city, district, pincode, state, desc optinal, category of address) 
-
+    Profile Picture: String
+    Orders: [orderID]
