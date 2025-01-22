@@ -1,0 +1,21 @@
+User functionality :
+    View product 
+    Add to Cart
+    Wishlist 
+    Order product 
+    Track order
+    View order 
+    Auth
+    Transaction
+    Rating product
+
+Admin functionality :
+    Authentication 
+    Add product 
+    Update product 
+    Delete product 
+    View order & details 
+    Update order status
+    Dashboard (Revenue, orders, sell, stock)
+    Transactions
+    Update transaction 

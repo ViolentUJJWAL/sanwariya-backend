@@ -1,0 +1,58 @@
+Payment scheme :
+    Payment by
+    Payment method 
+    Payment info:cardnumber, upi id, 
+    Transaction Id
+    Transaction date and time
+    Payment status 
+    Payment refund by 
+    Payment refund method 
+    Payment refund info
+    Payment refund transaction id
+    Payment refund transaction date and time 
+    Payment refund status 
+
+Order schema : 
+    Products [product name, quantity, total price]
+    Userid
+    Address
+    Total amount 
+    Estimate delivery date
+    Desc
+    Status: pending, dispatch, cancel, delivered 
+    Payment id
+
+Product schema :
+    Title
+    Desc
+    Image
+    Quantity 
+    Color
+    Size (Array) (optional)
+    Price (mrp, selling price)
+    Reviews 
+    Label (best seller, people's choice)
+    Tag
+
+
+Rating schema :
+    rating
+    Desc (review optional)
+    Image(optional)
+
+
+Admin schema :
+    Name
+    Phone no
+    Email
+    Pass
+
+User schema :
+    Phone no
+    Email
+    Pass
+    Name
+    Wishlist 
+    Cart
+    Address (array)(street, flat no, city, district, pincode, state, desc optinal, category of address)
+
