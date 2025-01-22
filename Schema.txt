@@ -1,58 +1,68 @@
 Payment scheme :
-    Payment by
-    Payment method 
-    Payment info:cardnumber, upi id, 
-    Transaction Id
-    Transaction date and time
-    Payment status 
-    Payment refund by 
-    Payment refund method 
-    Payment refund info
-    Payment refund transaction id
-    Payment refund transaction date and time 
-    Payment refund status 
+    Payment by : ID
+    Payment method : Enum[uip, card, COD], String
+    Payment info: cardnumber, upi id
+    Transaction Id : String
+    Transaction date and time : Date
+    Payment status : Enum[Pending, Paid, Unpaind, Refund ]
+    Payment refund by : ID
+    Payment refund method : Enum[uip, card, COD], String
+    Payment refund info : cardnumber, upi id
+    Payment refund transaction id : String
+    Payment refund transaction date and time : Date
+    Payment refund status : Enum[Pending, Refunded]
+    Refund Account : Bank details -> Acc no, IFSC Code, Holder's name, Bank name
 
 Order schema : 
-    Products [product name, quantity, total price]
-    Userid
-    Address
-    Total amount 
-    Estimate delivery date
-    Desc
-    Status: pending, dispatch, cancel, delivered 
-    Payment id
+    Products : [{product name, quantity, total price}]
+    Userid : Object.ID
+    Address : {
+        Flat No./House No.,
+        Street/colony,
+        City,
+        State,
+        Pincode,
+        Country,
+        Desc,
+        Category
+    }
+    Total amount : Number
+    Estimate delivery date : Date
+    Desc : String
+    Status: Enum[pending, dispatch, cancel, delivered] 
+    Payment id : ID
 
 Product schema :
-    Title
-    Desc
-    Image
-    Quantity 
-    Color
-    Size (Array) (optional)
-    Price (mrp, selling price)
-    Reviews 
-    Label (best seller, people's choice)
-    Tag
+    Title : String
+    Desc : String(HTML Format)
+    Image : files, []
+    Stock, Number
+    Color: String
+    Size (Array) (optional) : []
+    Price (mrp, selling price) : {mrp, selling price}
+    Reviews : Rating Schema
+    Label (best seller, people's choice) : Enum[best seller, people's choice, Trending]
+    Tag : String
 
 
 Rating schema :
-    rating
-    Desc (review optional)
-    Image(optional)
+    rating : []
+    Desc (review optional) : String
+    Image(optional) : files, []
 
 
 Admin schema :
-    Name
-    Phone no
-    Email
-    Pass
+    Name : String
+    Phone no : String
+    Email : String
+    Pass : Number
 
 User schema :
-    Phone no
-    Email
-    Pass
-    Name
-    Wishlist 
-    Cart
-    Address (array)(street, flat no, city, district, pincode, state, desc optinal, category of address)
+    Phone no : String
+    Email : String
+    Pass : Number
+    Name : String
+    Wishlist : [produce ID]
+    Cart : [{product ID, quantity}]
+    Address (array)(street, flat no, city, district, pincode, state, desc optinal, category of address) 
 
