@@ -1,10 +1,12 @@
 Payment schema :
+    amount: Number //same amount in refund amount
     Payment by : ID
     Payment method : Enum[uip, card, COD], String
     Payment info: cardnumber, upi id
     Transaction Id : String
     Transaction date and time : Date
     Payment status : Enum[Pending, Paid, Unpaind, Refund ]
+    refund amount: Number
     Payment refund by : ID
     Payment refund method : Enum[uip, card, COD], String
     Payment refund info : cardnumber, upi id
