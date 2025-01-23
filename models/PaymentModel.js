@@ -1,7 +1,9 @@
-import mongoose, { Schema } from "mongoose";
+const mongoose = require("mongoose");
+const crypto = require("crypto");
 
 const IV_LENGTH = parseInt(process.env.IV_LENGTH);
-const ENCRYPTION_KEY = parseInt(process.env.ENCRYPTION_KEY);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const ENCRYPTION_SPLIT = process.env.ENCRYPTION_SPLIT;
 
 // Encryption function
 function encrypt(text) {
@@ -9,12 +11,12 @@ function encrypt(text) {
   const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
   let encrypted = cipher.update(text, "utf8", "hex");
   encrypted += cipher.final("hex");
-  return iv.toString("hex") + ":" + encrypted;
+  return iv.toString("hex") + ENCRYPTION_SPLIT + encrypted;
 }
 
 // Decryption function
 function decrypt(text) {
-  const parts = text.split(":");
+  const parts = text.split(ENCRYPTION_SPLIT);
   const iv = Buffer.from(parts[0], "hex");
   const encryptedText = parts[1];
   const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
@@ -64,7 +66,7 @@ const PaymentModel = new mongoose.Schema(
       ref: "Admin",
     },
     paymentRefundMethod: {
-      enum: ["cash", "card", "UPI"],
+      enum: ["card", "UPI", "bank"],
       type: String,
       required: [true, "Please provide a refund method"],
     },
@@ -130,7 +132,6 @@ PaymentModel.pre("save", function (next) {
     // Encrypt each field except the excluded fields
     Object.keys(document).forEach((key) => {
       if (excludeFields.includes(key)) return; // Skip excluded fields
-  
       if (
         typeof document[key] === "string" ||
         typeof document[key] === "number"
