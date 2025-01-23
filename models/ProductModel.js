@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose")
+
 const ProductSchema = new mongoose.Schema(
   {
     title: {
@@ -68,6 +69,7 @@ const ProductSchema = new mongoose.Schema(
         ratedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
+          required: [true, "User are required"],
         },
         rating: {
           type: Number,

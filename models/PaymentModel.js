@@ -1,14 +1,17 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 
-const IV_LENGTH = parseInt(process.env.IV_LENGTH);
+const IV_LENGTH = parseInt(process.env.IV_LENGTH, 10) || 16; // Default to 16 if not set
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 const ENCRYPTION_SPLIT = process.env.ENCRYPTION_SPLIT;
 
 // Encryption function
 function encrypt(text) {
+  if (!ENCRYPTION_KEY || !ENCRYPTION_SPLIT) {
+    throw new Error("Encryption key or split character is not set.");
+  }
   const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY, "hex"), iv);
   let encrypted = cipher.update(text, "utf8", "hex");
   encrypted += cipher.final("hex");
   return iv.toString("hex") + ENCRYPTION_SPLIT + encrypted;
@@ -16,154 +19,176 @@ function encrypt(text) {
 
 // Decryption function
 function decrypt(text) {
+  if (!ENCRYPTION_KEY || !ENCRYPTION_SPLIT) {
+    throw new Error("Encryption key or split character is not set.");
+  }
   const parts = text.split(ENCRYPTION_SPLIT);
   const iv = Buffer.from(parts[0], "hex");
   const encryptedText = parts[1];
-  const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY, "hex"), iv);
   let decrypted = decipher.update(encryptedText, "hex", "utf8");
   decrypted += decipher.final("utf8");
   return decrypted;
 }
 
-//Paymet Model
+// Payment Schema
 const PaymentModel = new mongoose.Schema(
   {
     paymentBy: {
-      type: mongoose.SchemaSchema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Please provide a payment by"],
+      required: [true, "Please provide the user making the payment."],
     },
     paymentMethod: {
+      type: String,
       enum: ["cash", "card", "UPI"],
-      required: [true, "Please provide a payment method"],
+      required: [true, "Please provide a payment method."],
     },
     paymentInfo: {
-      type: String,
-      required: [true, "Please provide a payment info"],
+      type: Object,
     },
     transactionId: {
       type: String,
-      required: [true, "Please provide a transaction id"],
+      required: [true, "Please provide a transaction ID."],
     },
     amount: {
       type: Number,
-      required: [true, "Please provide an amount"],
+      required: [true, "Please provide an amount."],
     },
     transactionDateAndTime: {
       type: Date,
-      required: [true, "Please provide a date and time"],
+      required: [true, "Please provide a transaction date and time."],
     },
     paymentStatus: {
+      type: String,
       enum: ["pending", "paid", "unpaid", "refunded"],
-      required: [true, "Please provide a payment status"],
+      required: [true, "Please provide a payment status."],
     },
     refundAmount: {
       type: Number,
-      required: [true, "Please provide a refund amount"],
+      default: 0,
     },
     paymentRefundBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
     paymentRefundMethod: {
-      enum: ["card", "UPI", "bank"],
       type: String,
-      required: [true, "Please provide a refund method"],
+      enum: ["card", "UPI", "bank"],
     },
     paymentRefundInfo: {
       type: String,
-      required: [true, "Please provide a refund info"],
     },
     paymentRefundTransactionId: {
       type: String,
-      required: [true, "Please provide a transaction id"],
     },
     paymentRefundDateAndTime: {
       type: Date,
-      required: [true, "Please provide a date and time"],
     },
     paymentRefundStatus: {
       type: String,
       enum: ["pending", "refunded"],
-      required: [true, "Please provide a refund status"],
+      default: "pending",
     },
     refundAccount: {
       accountNumber: {
         type: String,
-        required: [true, "Please provide an account number"],
-        validate: {
-          validator: function (v) {
-            return /\d{9,18}/.test(v);
-          },
-          message: (props) => `${props.value} is not a valid account number!`,
-        },
+        required: [true, "Please provide an account number."],
       },
       ifscCode: {
         type: String,
-        required: [true, "Please provide an IFSC code"],
-        uppercase: true,
-        validate: {
-          validator: function (v) {
-            return /[A-Z]{4}0[A-Z0-9]{6}/.test(v);
-          },
-          message: (props) => `${props.value} is not a valid IFSC code!`,
-        },
+        required: [true, "Please provide an IFSC code."],
       },
       holderName: {
         type: String,
-        required: [true, "Please provide a holder name"],
+        required: [true, "Please provide the account holder's name."],
       },
       bankName: {
         type: String,
-        required: [true, "Please provide a bank name"],
+        required: [true, "Please provide the bank name."],
       },
     },
   },
   { timestamps: true }
 );
 
-// Middleware to encrypt fields before saving to MongoDB
+// Middleware to validate and encrypt fields before saving
 PaymentModel.pre("save", function (next) {
-    const document = this.toObject();
-  
-    // Fields to exclude from encryption
-    const excludeFields = ["paymentBy", "paymentRefundBy"];
-  
-    // Encrypt each field except the excluded fields
-    Object.keys(document).forEach((key) => {
-      if (excludeFields.includes(key)) return; // Skip excluded fields
-      if (
-        typeof document[key] === "string" ||
-        typeof document[key] === "number"
-      ) {
-        this[key] = encrypt(document[key].toString());
-      } else if (typeof document[key] === "object" && document[key] !== null) {
-        // Encrypt nested objects (like refundAccount)
-        Object.keys(document[key]).forEach((nestedKey) => {
-          if (typeof document[key][nestedKey] === "string") {
-            this[key][nestedKey] = encrypt(document[key][nestedKey]);
-          }
-        });
-      }
-    });
-  
-    next();
-  });
-  
+  const document = this;
 
-// Static method to decrypt fields after retrieving from MongoDB
+  const excludeFields = [
+    "paymentBy",
+    "paymentRefundBy",
+    "paymentRefundStatus",
+    "paymentRefundMethod",
+    "paymentMethod",
+  ];
+
+  // Validate fields before encryption
+  if (document.refundAccount) {
+    const { accountNumber, ifscCode } = document.refundAccount;
+
+    // Validate account number
+    if (accountNumber && !/^\d{9,18}$/.test(accountNumber)) {
+      return next(new Error(`${accountNumber} is not a valid account number.`));
+    }
+
+    // Validate IFSC code
+    if (ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) {
+      return next(new Error(`${ifscCode} is not a valid IFSC code.`));
+    }
+  }
+
+  // Encrypt fields
+  Object.keys(document.toObject()).forEach((key) => {
+    if (excludeFields.includes(key)) return;
+
+    if (typeof document[key] === "string" || typeof document[key] === "number") {
+      document[key] = encrypt(document[key].toString());
+    } else if (typeof document[key] === "object" && document[key] !== null) {
+      Object.keys(document[key]).forEach((nestedKey) => {
+        if (typeof document[key][nestedKey] === "string") {
+          document[key][nestedKey] = encrypt(document[key][nestedKey]);
+        }
+      });
+    }
+  });
+
+  next();
+});
+
+
 PaymentModel.methods.decryptFields = function () {
   const document = this.toObject();
 
+  // Fields that are not encrypted
+  const nonEncryptedFields = [
+    "paymentBy",
+    "paymentRefundBy",
+    "paymentRefundStatus",
+    "paymentRefundMethod",
+    "paymentMethod",
+  ];
+
   // Decrypt each field
   Object.keys(document).forEach((key) => {
+    if (nonEncryptedFields.includes(key)) return; // Skip non-encrypted fields
+
     if (typeof document[key] === "string") {
-      document[key] = decrypt(document[key]);
+      try {
+        document[key] = decrypt(document[key]);
+      } catch (err) {
+        console.error(`Failed to decrypt field ${key}: ${err.message}`);
+      }
     } else if (typeof document[key] === "object" && document[key] !== null) {
       // Decrypt nested objects (like refundAccount)
       Object.keys(document[key]).forEach((nestedKey) => {
         if (typeof document[key][nestedKey] === "string") {
-          document[key][nestedKey] = decrypt(document[key][nestedKey]);
+          try {
+            document[key][nestedKey] = decrypt(document[key][nestedKey]);
+          } catch (err) {
+            console.error(`Failed to decrypt nested field ${nestedKey}: ${err.message}`);
+          }
         }
       });
     }
@@ -171,6 +196,7 @@ PaymentModel.methods.decryptFields = function () {
 
   return document;
 };
+
 
 const Payment = mongoose.model("Payment", PaymentModel);
 module.exports = Payment;

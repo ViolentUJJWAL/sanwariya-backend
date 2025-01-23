@@ -1,5 +1,6 @@
-import mongoose from "mongoose";
-const AdminSchema = mongoose.Schema(
+const mongoose = require("mongoose")
+
+const AdminSchema = new mongoose.Schema(
   {
     phoneNo: {
       type: String,
