@@ -10,6 +10,9 @@ const OrderSchema = new mongoose.Schema(
           ref: "Product",
           required: [true, "Product is required"],
         },
+        productVariety:{
+          type: Object,
+        },
         quantity: {
           type: Number,
           required: [true, "Quantity is required"],

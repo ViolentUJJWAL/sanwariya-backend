@@ -9,13 +9,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors(
     {
-        origin: '*'
+        origin: ["*", "http://localhost:5173", "http://localhost:5174"],
     }
 ));
 
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
-});
+app.use('/api/v1/user', require('./routes/user.routes'));
+app.use('/api/v1/admin', require('./routes/admin.routes'));
 
 module.exports = app;

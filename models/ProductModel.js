@@ -13,18 +13,18 @@ const ProductSchema = new mongoose.Schema(
       required: [true, "Product description is required"],
     },
     image: {
-      type: [String],
-      validate: {
-        validator: function (v) {
-          return v.every((url) =>
-            /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url)
-          );
-        },
-        message:
-          "All images must be valid URLs ending with .jpg, .jpeg, .png, .webp, or .gif",
+      public_id: {
+        type: String,
+        required: [true, "Image Public Id is required"],
       },
+      url: {
+        type: String,
+        required: [true, "Image URL is required"],
     },
-
+    category: {
+      type: String,
+      required: [true, "Category is required"],
+    },
     variety: [
       {
         additionalDesc: {
@@ -37,28 +37,28 @@ const ProductSchema = new mongoose.Schema(
           },
           size: {
             type: String,
-          },
-          stock: {
+          }
+        },
+        stock: {
+          type: Number,
+          required: [true, "Stock is required"],
+          min: [0, "Stock cannot be negative"],
+        },
+        price: {
+          mrp: {
             type: Number,
-            required: [true, "Stock is required"],
-            min: [0, "Stock cannot be negative"],
+            required: [true, "MRP is required"],
+            min: [0, "MRP cannot be negative"],
           },
-          price: {
-            mrp: {
-              type: Number,
-              required: [true, "MRP is required"],
-              min: [0, "MRP cannot be negative"],
-            },
-            sellingPrice: {
-              type: Number,
-              required: [true, "Selling price is required"],
-              min: [0, "Selling price cannot be negative"],
-              validate: {
-                validator: function (v) {
-                  return v <= this.price.mrp;
-                },
-                message: "Selling price cannot be greater than MRP",
+          sellingPrice: {
+            type: Number,
+            required: [true, "Selling price is required"],
+            min: [0, "Selling price cannot be negative"],
+            validate: {
+              validator: function (v) {
+                return v <= this.price.mrp;
               },
+              message: "Selling price cannot be greater than MRP",
             },
           },
         },
@@ -114,6 +114,18 @@ const ProductSchema = new mongoose.Schema(
         maxlength: [50, "Tag cannot exceed 50 characters"],
       },
     ],
+    active: {
+      type: Boolean,
+      default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    sales: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
