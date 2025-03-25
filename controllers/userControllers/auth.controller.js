@@ -65,6 +65,7 @@ const verifyEmail = async (req, res) => {
             resetToken: token,
             resetTokenExpires: { $gt: Date.now() },
         });
+
         if (!user) {
             return res.status(400).json({
                 success: false,
@@ -72,16 +73,26 @@ const verifyEmail = async (req, res) => {
             });
         }
 
+        // Update user verification status
         user.isVerified = true;
         user.resetToken = undefined;
         user.resetTokenExpires = undefined;
         await user.save();
 
+        // Generate JWT token
         const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
+        // Set token in HTTP-only cookie
+        res.cookie("token", jwtToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // Set `secure` flag in production
+            sameSite: "Strict", // Prevent CSRF
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+        });
 
         res.status(200).json({
             success: true,
-            data: { token: jwtToken, message: "Email verified" },
+            message: "Email verified successfully",
         });
     } catch (error) {
         res.status(400).json({
@@ -90,6 +101,7 @@ const verifyEmail = async (req, res) => {
         });
     }
 };
+
 
 const socialLogin = async (req, res) => {
     try {
