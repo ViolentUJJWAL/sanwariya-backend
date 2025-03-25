@@ -35,6 +35,7 @@ exports.signout = async(req, res) => {
 }
 
 exports.signup = async(req, res) => {
+    console.log('req.body', req.body)
     const { email, password, phoneNo, name } = req.body;
     try {
         if(!email || !password || !phoneNo || !name) {
@@ -44,7 +45,12 @@ exports.signup = async(req, res) => {
         if(user) {
             return res.status(400).json({error: 'User already exists'});
         }
-        await Admin.create({email, password, phoneNo, name});
+        // This line might be hanging
+        const newUser = await Admin.create({email, password, phoneNo, name});
+        
+        // Move the console.log here to debug
+        console.log("New user created:", newUser);
+        
         return res.status(200).json({message: 'User created successfully'});
     } catch (error) {
         console.log(error);

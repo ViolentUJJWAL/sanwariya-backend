@@ -1,8 +1,8 @@
 const { signup, signin, signout } = require("../../controllers/adminControllers/auth.controller");
+const express = require("express")
+const router =  express.Router();
 
-module.exports = (router) => {
-    // Example route for getting all users
-    router.post("/auth/signup", signup);
-    router.post("/auth/signin", signin);
-    router.get("/auth/signout", signout);
-};
+router.post("/signup", signup);
+router.post("/signin", signin);
+router.get("/signout", signout);
+module.exports = router

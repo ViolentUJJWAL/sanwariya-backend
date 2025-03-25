@@ -13,7 +13,7 @@ const ProductSchema = new mongoose.Schema(
       type: String,
       required: [true, "Product description is required"],
     },
-    image: {
+    images: [{
       public_id: {
         type: String,
         required: [true, "Image Public Id is required"],
@@ -22,7 +22,7 @@ const ProductSchema = new mongoose.Schema(
         type: String,
         required: [true, "Image URL is required"],
       },
-    },
+    }],
     category: {
       type: String,
       required: [true, "Category is required"],
@@ -93,18 +93,22 @@ const ProductSchema = new mongoose.Schema(
         description: {
           type: String,
         },
-        images: {
-          type: [String],
-          validate: {
-            validator: function (v) {
-              return v.every((url) =>
-                /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url)
-              );
-            },
-            message:
-              "All images must be valid URLs ending with .jpg, .jpeg, .png, .webp, or .gif",
+        images: [{
+          public_id: {
+            type: String,
+            required: [true, "Review image Public Id is required"],
           },
-        },
+          url: {
+            type: String,
+            required: [true, "Review image URL is required"],
+            validate: {
+              validator: function (url) {
+                return /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+              },
+              message: "Image URL must be valid and end with .jpg, .jpeg, .png, .webp, or .gif",
+            },
+          },
+        }],
         isVerified: {
           type: Boolean,
           default: false

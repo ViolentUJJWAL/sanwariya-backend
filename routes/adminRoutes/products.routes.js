@@ -6,43 +6,46 @@ const {
   productValidation,
   reviewValidation,
 } = require("../../utils/validation");
+const { upload } = require("../../utils/cloudinaryConfig");
 
 const router = express.Router();
 
 // Admin Product Management Routes
 router.post(
-  "/products",
+  "/",
   isAdmin,
+  upload.array('images', 10),
   productValidation,
   adminController.createProduct
 );
 router.put(
-  "/products/:productId",
+  "/:productId",
   isAdmin,
   productValidation,
+  upload.array('images', 10),
   adminController.updateProduct
 );
-router.delete("/products/:productId", isAdmin, adminController.deleteProduct);
+router.delete("/:productId", isAdmin, adminController.deleteProduct);
 router.patch(
-  "/products/:productId/status",
+  "/:productId/status",
   isAdmin,
   adminController.updateProductStatus
 );
 router.patch(
-  "/products/:productId/variety/:varietyId/stock",
+  "/:productId/variety/:varietyId/stock",
   isAdmin,
   body("stock").isInt({ min: 0 }),
   adminController.updateStock
 );
 router.patch(
-  "/products/:productId/variety/:varietyId/price",
+  "/:productId/variety/:varietyId/price",
   isAdmin,
   body("mrp").optional().isFloat({ min: 0 }),
   body("sellingPrice").optional().isFloat({ min: 0 }),
   adminController.updatePrice
 );
 router.get(
-  "/products",
+  "/",
   isAdmin,
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
@@ -51,18 +54,18 @@ router.get(
 
 // Admin Review Management Routes
 router.put(
-  "/products/:productId/reviews/:reviewId",
+  "/:productId/reviews/:reviewId",
   isAdmin,
   reviewValidation,
   adminController.updateReview
 );
 router.delete(
-  "/products/:productId/reviews/:reviewId",
+  "/:productId/reviews/:reviewId",
   isAdmin,
   adminController.deleteReview
 );
 
 // Admin Product Stats
-router.get("/products/stats", isAdmin, adminController.getProductStats);
+router.get("/stats", isAdmin, adminController.getProductStats);
 
 module.exports = router;

@@ -65,5 +65,11 @@ router.delete(
   isAuth,
   userController.deleteUserReview
 );
+router.post("/wishlist/add", isAuth, userController.addToWishlist);
+router.post("/wishlist/remove", isAuth, removeFromWishlist
 
+);
+router.post("/cart/add", isAuth, userController.addToCart);
+router.post("/cart/remove", isAuth, userController.removeFromCart
+);
 module.exports = router;
