@@ -7,8 +7,8 @@ const AdminSchema = new mongoose.Schema(
     phoneNo: {
       type: String,
       required: [true, "Phone number is required"],
-      min: [10, "Mobile Number must be 10 Digits"],
-      max: [10, "Mobile Number must be 10 Digits"],
+      minlength: [10, "Mobile Number must be 10 Digits"],
+      maxlength: [10, "Mobile Number must be 10 Digits"],
     },
     email: {
       type: String,
@@ -17,7 +17,7 @@ const AdminSchema = new mongoose.Schema(
       match: [/^\S+@\S+\.\S+$/, "Email must be a valid email address"],
     },
     password: {
-      type: Number,
+      type: String,  // Changed from Number to String
       required: [true, "Password is required"],
     },
     name: {
@@ -36,10 +36,10 @@ const AdminSchema = new mongoose.Schema(
 );
 
 AdminSchema.pre("save", function (next) {
-  if(!this.isModified("password")) {
+  if (this.isModified("password")) {
     this.password = bcrypt.hashSync(this.password, parseInt(process.env.PASSWORD_SALT));
-    return next();
   }
+  next();
 });
 
 AdminSchema.methods.comparePassword = function (plaintext) {

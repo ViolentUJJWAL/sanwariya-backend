@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const ProductSchema = new mongoose.Schema(
   {
@@ -7,12 +7,13 @@ const ProductSchema = new mongoose.Schema(
       required: [true, "Product title is required"],
       trim: true,
       maxlength: [100, "Product title cannot exceed 100 characters"],
+      index: true, // Added index for better search performance
     },
     description: {
       type: String,
       required: [true, "Product description is required"],
     },
-    image: {
+    images: [{
       public_id: {
         type: String,
         required: [true, "Image Public Id is required"],
@@ -20,17 +21,19 @@ const ProductSchema = new mongoose.Schema(
       url: {
         type: String,
         required: [true, "Image URL is required"],
-    },
+      },
+    }],
     category: {
       type: String,
       required: [true, "Category is required"],
+      index: true, // Added index for category-based queries
     },
     variety: [
       {
         additionalDesc: {
-          weigthInGrams: {
+          weightInGrams: {
             type: Number,
-            min: [0, "Weight is greater than 0"],
+            min: [0, "Weight must be greater than 0"],
           },
           color: {
             type: String,
@@ -61,7 +64,17 @@ const ProductSchema = new mongoose.Schema(
               message: "Selling price cannot be greater than MRP",
             },
           },
+          discountPercentage: {
+            type: Number,
+            default: function() {
+              return Math.round(((this.price.mrp - this.price.sellingPrice) / this.price.mrp) * 100);
+            }
+          }
         },
+        isActive: {
+          type: Boolean,
+          default: true
+        }
       },
     ],
     reviews: [
@@ -69,51 +82,61 @@ const ProductSchema = new mongoose.Schema(
         ratedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
-          required: [true, "User are required"],
+          required: [true, "User is required"],
         },
         rating: {
           type: Number,
-          validate: {
-            validator: function (v) {
-              return v.every((num) => num >= 1 && num <= 5);
-            },
-            message: "Each rating must be between 1 and 5",
-          },
-          required: [true, "Ratings are required"],
+          min: [1, "Rating must be at least 1"],
+          max: [5, "Rating cannot exceed 5"],
+          required: [true, "Rating is required"],
         },
         description: {
           type: String,
         },
-        image: {
-          type: [String],
-          validate: {
-            validator: function (v) {
-              return v.every((url) =>
-                /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url)
-              );
-            },
-            message:
-              "All images must be valid URLs ending with .jpg, .jpeg, .png, .webp, or .gif",
+        images: [{
+          public_id: {
+            type: String,
+            required: [true, "Review image Public Id is required"],
           },
+          url: {
+            type: String,
+            required: [true, "Review image URL is required"],
+            validate: {
+              validator: function (url) {
+                return /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+              },
+              message: "Image URL must be valid and end with .jpg, .jpeg, .png, .webp, or .gif",
+            },
+          },
+        }],
+        isVerified: {
+          type: Boolean,
+          default: false
         },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
       },
     ],
-
-    label: {
-      type: String,
-      enum: {
-        values: ["best seller", "people's choice", "trending"],
-        message: "Label must be one of: best seller, people's choice, trending",
-      },
-      required: [true, "Label is required"],
+    avgRating: {
+      type: Number,
+      default: 0
     },
-    tag: [
-      {
-        type: String,
-        required: [true, "Tag is required"],
-        maxlength: [50, "Tag cannot exceed 50 characters"],
-      },
-    ],
+    totalReviews: {
+      type: Number,
+      default: 0
+    },
+    labels: [{
+      type: String,
+      enum: ["best seller", "people's choice", "trending", "new arrival", "limited edition"],
+      required: true
+    }],
+    tags: [{
+      type: String,
+      required: [true, "Tag is required"],
+      maxlength: [50, "Tag cannot exceed 50 characters"],
+    }],
     active: {
       type: Boolean,
       default: true,
@@ -126,9 +149,55 @@ const ProductSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    searchScore: {
+      type: Number,
+      default: 0  // For implementing trending products based on views, sales, and reviews
+    }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+// Indexes for better query performance
+ProductSchema.index({ title: 'text', description: 'text', tags: 'text' });
+ProductSchema.index({ labels: 1 });
+ProductSchema.index({ searchScore: -1 });
+ProductSchema.index({ avgRating: -1 });
+ProductSchema.index({ sales: -1 });
+
+// Update average rating when a review is added/modified
+ProductSchema.methods.updateAverageRating = async function() {
+  const reviews = this.reviews;
+  if (reviews.length === 0) {
+    this.avgRating = 0;
+    this.totalReviews = 0;
+  } else {
+    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+    this.avgRating = Math.round((sum / reviews.length) * 10) / 10;
+    this.totalReviews = reviews.length;
+  }
+  await this.save();
+};
+
+// Update search score periodically (can be called by a cron job)
+ProductSchema.methods.updateSearchScore = async function() {
+  const WEIGHTS = {
+    sales: 0.4,
+    reviews: 0.3,
+    rating: 0.3
+  };
+  
+  this.searchScore = (
+    (this.sales * WEIGHTS.sales) +
+    (this.totalReviews * WEIGHTS.reviews) +
+    (this.avgRating * WEIGHTS.rating)
+  );
+  
+  await this.save();
+};
 
 const Product = mongoose.model("Product", ProductSchema);
 module.exports = Product;

@@ -1,8 +1,19 @@
 const mongoose = require("mongoose");
 
-
 const OrderSchema = new mongoose.Schema(
   {
+    orderNumber: {
+      type: String,
+      unique: true,
+      required: [true, "Order number is required"],
+    },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User ID is required"],
+    },
+
     products: [
       {
         product: {
@@ -10,8 +21,8 @@ const OrderSchema = new mongoose.Schema(
           ref: "Product",
           required: [true, "Product is required"],
         },
-        productVariety:{
-          type: Object,
+        productVariety: {
+          type: Object, // e.g., color, size
         },
         quantity: {
           type: Number,
@@ -25,21 +36,14 @@ const OrderSchema = new mongoose.Schema(
         },
       },
     ],
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "User ID is required"],
-    },
+
     address: {
-      flatNo: {
-        type: String,
-        required: [true, "Flat/House number is required"],
-      },
-      street: { type: String, required: [true, "Street/Colony is required"] },
-      city: { type: String, required: [true, "City is required"] },
-      state: { type: String, required: [true, "State is required"] },
-      pincode: { type: String, required: [true, "Pincode is required"] },
-      country: { type: String, required: [true, "Country is required"] },
+      flatNo: { type: String, required: true },
+      street: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: { type: String, required: true },
+      country: { type: String, required: true },
       description: { type: String },
       category: {
         type: String,
@@ -47,45 +51,94 @@ const OrderSchema = new mongoose.Schema(
         default: "other",
       },
     },
+
     totalAmount: {
       type: Number,
       required: [true, "Total amount is required"],
       min: [0, "Total amount cannot be negative"],
     },
+
+    payableAmount: {
+      type: Number,
+      required: [true, "Payable amount is required"],
+      min: [0, "Payable amount cannot be negative"],
+    },
+
+    discount: {
+      code: { type: String },
+      amount: { type: Number, min: 0 },
+    },
+
+    shipping: {
+      method: {
+        type: String,
+        enum: ["standard", "express"],
+        default: "standard",
+      },
+      cost: { type: Number, min: 0, required: true },
+      trackingNumber: { type: String },
+    },
+
     estimatedDeliveryDate: {
       type: Date,
       required: [true, "Estimated delivery date is required"],
     },
-    description: {
-      type: String,
-    },
-    status: {
-      type: String,
-      enum: {
-        values: ["pending", "dispatch", "cancel", "delivered"],
-        message: "Status must be one of: pending, dispatch, cancel, delivered",
-      },
-      required: [true, "Order status is required"],
-    },
+
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",
       required: [true, "Payment ID is required"],
     },
+
+    status: {
+      type: String,
+      // enum: ["pending", "dispatch", "cancel", "delivered"],
+      enum: ["pending", "processing", "shipped", "cancelled", "completed"],
+      required: [true, "Order status is required"],
+    },
+
     orderTrack: {
-      dateAndTime: {
-        type: Date,
-      },
-      location: {
-        type: String,
-      },
+      dateAndTime: { type: Date },
+      location: { type: String },
+    },
+
+    refund: {
+      isRefunded: { type: Boolean, default: false },
+      amount: { type: Number, min: 0 },
+      reason: { type: String },
+      refundedAt: { type: Date },
+    },
+    customerNote: {
+      type: String,
+      maxlength: 500,
+    },
+    adminNote: {
+      type: String,
+    },
+    giftOptions: {
+      isGift: { type: Boolean, default: false },
+      message: { type: String },
     },
   },
   { timestamps: true }
 );
 
-OrderSchema.pre("save", function (next) {
-  // Example: Automatically set an estimated delivery date if not provided
+// Auto-generate a unique 10-digit orderNumber if not provided
+OrderSchema.pre("save", async function (next) {
+  if (!this.orderNumber) {
+    let isUnique = false;
+    while (!isUnique) {
+      const randomDigits = Math.floor(1000000000 + Math.random() * 9000000000);
+      const orderNumber = `ORD-${randomDigits}`;
+
+      const existingOrder = await mongoose.model("Order").findOne({ orderNumber });
+      if (!existingOrder) {
+        this.orderNumber = orderNumber;
+        isUnique = true;
+      }
+    }
+  }
+
   if (!this.estimatedDeliveryDate) {
     const currentDate = new Date();
     this.estimatedDeliveryDate = new Date(
@@ -93,9 +146,8 @@ OrderSchema.pre("save", function (next) {
     ); // Default to 7 days later
   }
 
-  console.log("About to save an order for user ID:", this.userId);
   next();
 });
 
 const Order = mongoose.model("Order", OrderSchema);
-modules.export = Order;
+module.exports = Order;

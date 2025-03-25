@@ -57,7 +57,6 @@ const PaymentModel = new mongoose.Schema(
     },
     transactionDateAndTime: {
       type: Date,
-      required: [true, "Please provide a transaction date and time."],
     },
     paymentStatus: {
       type: String,
@@ -77,7 +76,7 @@ const PaymentModel = new mongoose.Schema(
       enum: ["card", "UPI", "bank"],
     },
     paymentRefundInfo: {
-      type: String,
+      type: Object,
     },
     paymentRefundTransactionId: {
       type: String,

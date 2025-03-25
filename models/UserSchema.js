@@ -1,93 +1,159 @@
-const mongoose = require("mongoose")
+// models/User.js
+const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const UserSchema = new mongoose.Schema(
   {
-    phoneNo: {
-      type: String,
-      required: [true, "Phone number is required"],
-      min: [10, "Mobile Number must be 10 Digits"],
-      max: [10, "Mobile Number must be 10 Digits"],
-    },
     email: {
       type: String,
       required: [true, "Email is required"],
       unique: true,
+      lowercase: true,
+      trim: true,
       match: [/^\S+@\S+\.\S+$/, "Email must be a valid email address"],
     },
     password: {
+      type: String,
+      required: function () {
+        return !this.socialLogin; // Required only for non-social-login users
+      },
+      minlength: [6, "Password must be at least 6 characters"],
+      select: false, // Exclude from queries by default
+    },
+    phoneNo: {
       type: Number,
-      required: [true, "Password is required"],
+      sparse: true, // Allows null/undefined without unique constraint issues
+      trim: true,
+      match: [/^\d{10}$/, "Phone number must be 10 digits"],
+      default: null,
     },
     fullName: {
       firstName: {
         type: String,
-        required: [true, "Name is required"],
+        required: [true, "First name is required"],
         trim: true,
-        minLength: [3, "Name length must greater than 3"],
+        minlength: [3, "First name must be at least 3 characters"],
       },
       lastName: {
         type: String,
         trim: true,
+        minlength: [1, "Last name must be at least 1 character if provided"],
+        default: "",
       },
     },
-    wishlist: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
+    socialLogin: {
+      provider: {
+        type: String,
+        enum: ["google", "facebook", "apple"],
+        default: null,
       },
-    ],
-    cart: [
-      {
-        productId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: [true, "Product ID is required"],
-        },
-        quantity: {
-          type: Number,
-          required: [true, "Quantity is required"],
-          min: [1, "Quantity cannot be less than 1"],
-        },
+      id: {
+        type: String,
+        default: null,
       },
-    ],
-    address: [
-      {
-        street: { type: String, required: [true, "Street is required"] },
-        flatNo: {
-          type: String,
-          required: [true, "Flat/House number is required"],
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    resetToken: {
+      type: String,
+      select: false, // Exclude from queries
+      default: null,
+    },
+    resetTokenExpires: {
+      type: Date,
+      select: false, // Exclude from queries
+      default: null,
+    },
+    wishlist: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+      default: [],
+    },
+    cart: {
+      type: [
+        {
+          productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+            required: [true, "Product ID is required"],
+          },
+          quantity: {
+            type: Number,
+            required: [true, "Quantity is required"],
+            min: [1, "Quantity cannot be less than 1"],
+            default: 1,
+          },
         },
-        city: { type: String, required: [true, "City is required"] },
-        pincode: { type: String, required: [true, "Pincode is required"] },
-        state: { type: String, required: [true, "State is required"] },
-        description: { type: String },
-        category: {
-          type: String,
-          enum: ["home", "work", "other"],
-          default: "other",
+      ],
+      default: [],
+    },
+    address: {
+      type: [
+        {
+          street: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          flatNo: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          city: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          pincode: {
+            type: String,
+            trim: true,
+            match: [/^\d{6}$/, "Pincode must be 6 digits"],
+            default: "",
+          },
+          state: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          description: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          category: {
+            type: String,
+            enum: ["home", "work", "other"],
+            default: "other",
+          },
         },
-      },
-    ],
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
-UserSchema.pre("save", function (next) {
-  if(!this.isModified("password")) {
-    this.password = bcrypt.hashSync(this.password, parseInt(process.env.PASSWORD_SALT));
-    return next();
+// Pre-save hook to hash password
+UserSchema.pre("save", async function (next) {
+  if (this.isModified("password") && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
   }
+  next();
 });
 
+// Method to compare passwords
 UserSchema.methods.comparePassword = function (plaintext) {
   return bcrypt.compareSync(plaintext, this.password);
-}
+};
 
-UserSchema.methods.generateToken = function () {
-  return jwt.sign({ id: this._id }, process.env.JWT_SECRET);
-}
+// Method to generate JWT token
+UserSchema.methods.generateToken = function (longLived = false) {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: longLived ? "30d" : "1d",
+  });
+};
 
-const User = mongoose.model("User", UserSchema);
-module.exports = User;
+module.exports = mongoose.model("User", UserSchema);
