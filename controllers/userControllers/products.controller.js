@@ -1,7 +1,7 @@
 // userProductController.js
 const { validationResult } = require("express-validator");
 const Product = require("../../models/ProductModel");
-const User = require("../../models/User"); // Assuming User model is in this path
+const User = require("../../models/UserSchema"); // Assuming User model is in this path
 
 // Get all products
 const getAllProducts = async (req, res) => {

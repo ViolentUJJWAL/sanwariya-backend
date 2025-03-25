@@ -8,7 +8,7 @@ const router = express.Router();
 
 // User Product Routes
 router.get(
-  "/products",
+  "",
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
   query("category").optional().trim(),
@@ -19,15 +19,15 @@ router.get(
     .isIn(["price", "-price", "rating", "-rating", "newest"]),
   userController.getAllProducts
 );
-router.get("/products/:productId", userController.getProduct);
+router.get("/:productId", userController.getProduct);
 router.get(
-  "/products/category/:category",
+  "/category/:category",
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
   userController.getProductsByCategory
 );
 router.get(
-  "/products/label/:label",
+  "/label/:label",
   param("label").isIn([
     "best seller",
     "people's choice",
@@ -40,7 +40,7 @@ router.get(
   userController.getProductsByLabel
 );
 router.get(
-  "/products/search",
+  "/search",
   query("q").trim().notEmpty(),
   query("page").optional().isInt({ min: 1 }),
   query("limit").optional().isInt({ min: 1, max: 100 }),
@@ -49,13 +49,13 @@ router.get(
 
 // User Review Routes
 router.post(
-  "/products/:productId/reviews",
+  "/:productId/reviews",
   isAuth,
   reviewValidation,
   userController.addReview
 );
 router.put(
-  "/products/:productId/reviews/:reviewId",
+  "/:productId/reviews/:reviewId",
   isAuth,
   reviewValidation,
   userController.updateUserReview
@@ -66,7 +66,7 @@ router.delete(
   userController.deleteUserReview
 );
 router.post("/wishlist/add", isAuth, userController.addToWishlist);
-router.post("/wishlist/remove", isAuth, removeFromWishlist
+router.post("/wishlist/remove", isAuth, userController.removeFromWishlist
 
 );
 router.post("/cart/add", isAuth, userController.addToCart);
