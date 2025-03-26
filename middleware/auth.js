@@ -5,7 +5,9 @@ const Admin = require('../models/AdminModel'); // Adjust the path as needed
 // Middleware to check if the request is from an authenticated user
 const isAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
+    const token = req.cookies?.token || req.headers.authorization?.split(" ")[1] ;
+
+    console.log('token', token)
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -15,8 +17,7 @@ const isAuth = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Check if decoded payload contains 'id' (matches token generation in User model)
+
     if (!decoded.id) {
       return res.status(401).json({
         success: false,
@@ -37,52 +38,35 @@ const isAuth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    // Handle specific JWT errors
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token has expired.",
-      });
-    }
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token.",
-      });
-    }
+    const errorMessage =
+      error.name === "TokenExpiredError" ? "Token has expired." :
+      error.name === "JsonWebTokenError" ? "Invalid token." :
+      "Unauthorized. Authentication failed.";
 
-    // Generic error fallback
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized. Authentication failed.",
-    });
+    return res.status(401).json({ success: false, message: errorMessage });
   }
 };
 
 // Middleware to check if the request is from an authenticated admin
 const isAdmin = async (req, res, next) => {
   try {
-    let token = req.headers.authorization?.split(' ')[1];
-
-    if (!token && req.cookies && req.cookies.token) {
-      token = req.cookies.token;
-    }
+    const token =  req.cookies?.token || req.headers.authorization?.split(" ")[1] ;
 
     if (!token) {
-      return res.status(401).json({ message: 'Access Denied. No token provided.' });
+      return res.status(401).json({ message: "Access Denied. No token provided." });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const admin = await Admin.findById(decoded.id).select('-password');
+    const admin = await Admin.findById(decoded.id).select("-password");
     if (!admin) {
-      return res.status(401).json({ message: 'Invalid token or admin not found.' });
+      return res.status(401).json({ message: "Invalid token or admin not found." });
     }
 
     req.admin = admin;
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Unauthorized. Invalid or expired token.' });
+    return res.status(401).json({ message: "Unauthorized. Invalid or expired token." });
   }
 };
 
