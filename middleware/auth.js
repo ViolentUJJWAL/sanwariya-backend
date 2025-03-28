@@ -50,6 +50,7 @@ const isAuth = async (req, res, next) => {
 // Middleware to check if the request is from an authenticated admin
 const isAdmin = async (req, res, next) => {
   try {
+    console.log('req.cookies', req.cookies)
     const token =  req.cookies?.token || req.headers.authorization?.split(" ")[1] ;
 
     if (!token) {
@@ -63,7 +64,7 @@ const isAdmin = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid token or admin not found." });
     }
 
-    req.admin = admin;
+    req.user = admin;
     next();
   } catch (error) {
     return res.status(401).json({ message: "Unauthorized. Invalid or expired token." });

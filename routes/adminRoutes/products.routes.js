@@ -25,6 +25,8 @@ router.put(
   upload.array('images', 10),
   adminController.updateProduct
 );
+router.get("/:id", adminController.getProductById);
+
 router.delete("/:productId", isAdmin, adminController.deleteProduct);
 router.patch(
   "/:productId/status",
