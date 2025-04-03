@@ -20,8 +20,6 @@ app.use(cors(
     }
 ));
 
-app.use("/api/admin/auth", adminAuth)
-app.use("/api/user/auth", userAuth)
 app.use("/api/admin/products", adminProducts)
 app.use("/api/user/products", userProducts)
 
