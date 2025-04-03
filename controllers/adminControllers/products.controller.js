@@ -76,6 +76,7 @@ exports.updateProduct = async (req, res) => {
     handleValidationErrors(req, res);
 
     const { productId } = req.params;
+    console.log('productId', productId)
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({
         success: false,
