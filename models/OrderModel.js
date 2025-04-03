@@ -5,7 +5,6 @@ const OrderSchema = new mongoose.Schema(
     orderNumber: {
       type: String,
       unique: true,
-      required: [true, "Order number is required"],
     },
 
     userId: {
@@ -81,13 +80,11 @@ const OrderSchema = new mongoose.Schema(
 
     estimatedDeliveryDate: {
       type: Date,
-      required: [true, "Estimated delivery date is required"],
     },
 
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",
-      required: [true, "Payment ID is required"],
     },
 
     status: {
@@ -95,6 +92,7 @@ const OrderSchema = new mongoose.Schema(
       // enum: ["pending", "dispatch", "cancel", "delivered"],
       enum: ["pending", "processing", "shipped", "cancelled", "completed"],
       required: [true, "Order status is required"],
+      default: "pending"
     },
 
     orderTrack: {
@@ -125,25 +123,28 @@ const OrderSchema = new mongoose.Schema(
 
 // Auto-generate a unique 10-digit orderNumber if not provided
 OrderSchema.pre("save", async function (next) {
+  console.log("save")
   if (!this.orderNumber) {
     let isUnique = false;
     while (!isUnique) {
       const randomDigits = Math.floor(1000000000 + Math.random() * 9000000000);
       const orderNumber = `ORD-${randomDigits}`;
-
+      
       const existingOrder = await mongoose.model("Order").findOne({ orderNumber });
       if (!existingOrder) {
         this.orderNumber = orderNumber;
         isUnique = true;
       }
     }
+    console.log("save", this.orderNumber)
   }
-
+  
   if (!this.estimatedDeliveryDate) {
     const currentDate = new Date();
     this.estimatedDeliveryDate = new Date(
       currentDate.setDate(currentDate.getDate() + 7)
     ); // Default to 7 days later
+    console.log("save", this.estimatedDeliveryDate)
   }
 
   next();

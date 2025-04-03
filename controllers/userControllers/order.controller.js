@@ -37,6 +37,38 @@ exports.placeOrder = async (req, res) => {
 
         }
 
+        for (const orderedProduct of products) {
+            const productId = orderedProduct.product;
+            const varietyId = orderedProduct.productVariety.id;
+            const quantityOrdered = orderedProduct.quantity;
+
+            // Fetch the product
+            const product = await Product.findById(productId);
+            if (!product) {
+                console.log(`Product ${product.title} not found`);
+                return res.status(404).json({ message: `Product ${product.title} not found` });
+            }
+
+            // Find the correct variety
+            const variety = product.variety.find(v => v.id === varietyId);
+            if (!variety) {
+                console.log(`Variety ${varietyId} not found in product ${productId}`);
+                return res.status(404).json({ message: `Variety not found in product` });
+            }
+
+            // Check stock availability
+            if (variety.stock < quantityOrdered) {
+                return res.status(400).json({ message: `Insufficient stock for ${product.title}` });
+            }
+
+            // Decrease stock
+            variety.stock -= quantityOrdered;
+
+            // Save updated product
+            await product.save();
+            console.log(`Stock updated for variety ${varietyId}, new stock: ${variety.stock}`);
+        }
+
         // **Validation Address**
         if (!address || !address.flatNo || !address.street || !address.city ||
             !address.state || !address.pincode || !address.country) {
@@ -52,7 +84,7 @@ exports.placeOrder = async (req, res) => {
         let discount = undefined;
         if (discountCode) {
 
-            const coupon = await Coupon.findOne({ discountCode, active: true });
+            const coupon = await Coupon.findOne({ code: discountCode, active: true });
             if (!coupon) return res.status(404).json({ message: 'Coupon not found or inactive' });
 
             if (coupon.expirationDate && coupon.expirationDate < new Date()) {
@@ -84,6 +116,7 @@ exports.placeOrder = async (req, res) => {
             }
         }
 
+        let shippingCost = 50;
 
         let payableAmount = (totalAmount - discountAmount) + shippingCost
 
@@ -92,10 +125,10 @@ exports.placeOrder = async (req, res) => {
         }
 
         // **Validation Payment**
-        const payment = await Payment.findById(paymentId);
-        if (!payment) {
-            return res.status(400).json({ message: "Invalid payment ID" });
-        }
+        // const payment = await Payment.findById(paymentId);
+        // if (!payment) {
+        //     return res.status(400).json({ message: "Invalid payment ID" });
+        // }
 
         // Create new order object
         const order = new Order({
@@ -178,6 +211,7 @@ exports.updatePlaceOrder = async (req, res) => {
 exports.getUserOrders = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
+        console.log(req.user)
         const query = { userId: req.user._id };
 
         // Apply date range filter if provided
@@ -187,7 +221,31 @@ exports.getUserOrders = async (req, res) => {
             if (endDate) query.createdAt.$lte = new Date(endDate);
         }
 
-        const orders = await Order.find(query).sort({ createdAt: -1 });
+        const orders = await Order.find(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
+        .populate({
+            path: "products.product",
+            model: "Product",
+            select: "title description images category",
+        });;
+
+        return res.status(200).json({ message: "Orders retrieved successfully", orders });
+    } catch (error) {
+        console.error("Error retrieving user orders:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.getOrdersById = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const query = { userId: req.user._id, _id: orderId };
+
+        const orders = await Order.findOne(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
+        .populate({
+            path: "products.product",
+            model: "Product",
+            select: "title description images category",
+        });;
 
         return res.status(200).json({ message: "Orders retrieved successfully", orders });
     } catch (error) {

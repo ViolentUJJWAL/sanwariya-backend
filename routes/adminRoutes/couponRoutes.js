@@ -8,6 +8,7 @@ const {
     deleteCoupon,
     applyCoupon
 } = require('../../controllers/adminControllers/coupon.controller'); // Adjust path as needed
+const { isAuth, isAdmin } = require('../../middleware/auth');
 
 // Middleware to handle validation errors
 const validate = (req, res, next) => {
@@ -20,7 +21,7 @@ const validate = (req, res, next) => {
 
 // Add a new coupon
 router.post(
-    '/coupons',
+    '/',
     [
         body('code').notEmpty().withMessage('Coupon code is required'),
         body('discountType').isIn(['fixed', 'percentage']).withMessage('Discount type must be fixed or percentage'),
@@ -31,12 +32,13 @@ router.post(
         body('expirationDate').optional().isISO8601().withMessage('Expiration date must be a valid date'),
     ],
     validate,
+    isAdmin,
     addCoupon
 );
 
 // Update a coupon
 router.put(
-    '/coupons/:id',
+    '/:id',
     [
         param('id').isMongoId().withMessage('Invalid coupon ID'),
         body('discountType').optional().isIn(['fixed', 'percentage']).withMessage('Discount type must be fixed or percentage'),
@@ -48,25 +50,27 @@ router.put(
         body('active').optional().isBoolean().withMessage('Active must be a boolean'),
     ],
     validate,
+    isAdmin,
     updateCoupon
 );
 
 // Get all valid coupons
-router.get('/coupons/valid', getValidCoupons);
+router.get('/valid', getValidCoupons);
 
 // Soft delete a coupon
 router.delete(
-    '/coupons/:id',
+    '/:id',
     [
         param('id').isMongoId().withMessage('Invalid coupon ID'),
     ],
     validate,
+    isAdmin,
     deleteCoupon
 );
 
 // Apply a coupon
 router.post(
-    '/coupons/apply',
+    '/apply',
     [
         body('code').notEmpty().withMessage('Coupon code is required'),
         body('totalAmount').isFloat({ gt: 0 }).withMessage('Total amount must be greater than 0'),

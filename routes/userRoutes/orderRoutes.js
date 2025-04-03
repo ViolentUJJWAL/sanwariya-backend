@@ -4,8 +4,10 @@ const { body, param, query, validationResult } = require('express-validator');
 const {
     placeOrder,
     updatePlaceOrder,
-    getUserOrders
+    getUserOrders,
+    getOrdersById
 } = require('../../controllers/userControllers/order.controller'); // Adjust path as needed
+const { isAuth } = require('../../middleware/auth');
 
 // Middleware to handle validation errors
 const validate = (req, res, next) => {
@@ -18,7 +20,7 @@ const validate = (req, res, next) => {
 
 // Place a new order
 router.post(
-    '/orders',
+    '',
     [
         body('products').isArray({ min: 1 }).withMessage('Products must be a non-empty array'),
         body('products.*.product').isMongoId().withMessage('Invalid product ID'),
@@ -32,17 +34,18 @@ router.post(
         body('address.pincode').notEmpty().withMessage('Pincode is required'),
         body('address.country').notEmpty().withMessage('Country is required'),
         body('discountCode').optional().notEmpty().withMessage('Discount code cannot be empty'),
-        body('paymentId').isMongoId().withMessage('Invalid payment ID'),
+        // body('paymentId').isMongoId().withMessage('Invalid payment ID'),
         body('customerNote').optional().notEmpty().withMessage('Customer note cannot be empty'),
         body('giftOptions').optional().exists().withMessage('Gift options must be provided if included'),
     ],
     validate,
+    isAuth,
     placeOrder
 );
 
 // Update an existing order
 router.put(
-    '/orders/:orderId',
+    '/:orderId',
     [
         param('orderId').isMongoId().withMessage('Invalid order ID'),
         body('customerNote').optional().notEmpty().withMessage('Customer note cannot be empty'),
@@ -56,18 +59,26 @@ router.put(
         body('address.country').optional().notEmpty().withMessage('Country is required'),
     ],
     validate,
+    isAuth,
     updatePlaceOrder
 );
 
 // Get user orders
 router.get(
-    '/orders/me',
+    '/me',
     [
         query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
         query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
     ],
     validate,
+    isAuth,
     getUserOrders
+);
+
+router.get(
+    '/:orderId',
+    isAuth,
+    getOrdersById
 );
 
 module.exports = router;

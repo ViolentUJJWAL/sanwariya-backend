@@ -39,7 +39,7 @@ exports.addCoupon = async (req, res) => {
             return handleError(res, 'Expiration date must be in the future');
         }
 
-        const coupon = new Coupon(req.body);
+        const coupon = new Coupon({ code, discountType, discountValue, expirationDate, minimumPurchase, maxDiscountAmount, usageLimit, applicableProducts, customerEligibility });
         await coupon.save();
         res.status(201).json({ message: 'Coupon added successfully', coupon });
     } catch (error) {
@@ -81,7 +81,7 @@ exports.getValidCoupons = async (req, res) => {
         const currentDate = new Date();
         const coupons = await Coupon.find({
             active: true, $or: [
-                { expirationDate: { $exists: false } },
+                { expirationDate: null },
                 { expirationDate: { $gt: currentDate } }
             ]
         });
