@@ -71,10 +71,12 @@ exports.createProduct = async (req, res) => {
 
 // Update Product API (Partial Update)
 exports.updateProduct = async (req, res) => {
+  console.log('req.body', req.body)
   try {
     handleValidationErrors(req, res);
 
     const { productId } = req.params;
+    console.log('productId', productId)
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({
         success: false,
@@ -155,6 +157,23 @@ exports.updateProduct = async (req, res) => {
     });
   }
 };
+
+exports.getProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    res.status(200).json({ success: true, product });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 
 // Delete Product (Soft Delete)
 exports.deleteProduct = async (req, res) => {

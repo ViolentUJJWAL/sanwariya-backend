@@ -58,6 +58,19 @@ exports.signup = async(req, res) => {
     }
 }
 
+exports.getProfile = async (req, res) => {
+    try {
+        const user = await Admin.findById(req.user._id).select("-password -expairyOtp -otp");
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        return res.status(200).json({ user });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ error: "Server error" });
+    }
+};
+
 exports.sendOtp = async(req, res) => {
     const { email } = req.body;
     try {
@@ -87,6 +100,7 @@ exports.sendOtp = async(req, res) => {
 }
 
 exports.verifyOtp = async(req, res) => {
+    console.log('req.body', req.body)
     const { email, otp, password } = req.body;
     try {
         if(!email || !otp) {
@@ -96,9 +110,9 @@ exports.verifyOtp = async(req, res) => {
         if(!user) {
             return res.status(400).json({error: 'User not found'});
         }
-        if(new Date() > user.expairyOtp) {
-            return res.status(400).json({error: 'Invalid OTP or OTP expired'});
-        }
+        // if(new Date() > user.expairyOtp) {
+        //     return res.status(400).json({error: 'Invalid OTP or OTP expired'});
+        // }
         if(! await bcrypt.compare(otp, user.otp)) {
             return res.status(400).json({error: 'Invalid OTP or OTP expired'});
         }

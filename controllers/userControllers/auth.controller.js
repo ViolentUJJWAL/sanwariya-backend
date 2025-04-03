@@ -175,7 +175,15 @@ const login = async (req, res) => {
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
             expiresIn: rememberMe ? "30d" : "1d",
         });
+        console.log('Generated Token:', token);
 
+        // Set the token in an HTTP-only cookie
+        res.cookie("token", token, {
+            httpOnly: true, // Prevents XSS attacks
+            secure: process.env.NODE_ENV === "production", // Set true in production
+            sameSite: "Strict", // Protects against CSRF
+            maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 30 days or 1 day
+        });
         res.status(200).json({
             success: true,
             data: { token, user: user.toObject({ getters: true }) },
