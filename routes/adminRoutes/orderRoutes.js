@@ -5,6 +5,7 @@ const {
     adminUpdateOrder,
     getAllOrders
 } = require('../../controllers/adminControllers/order.controller'); // Adjust path as needed
+const { isAdmin } = require('../../middleware/auth');
 
 // Middleware to handle validation errors
 const validate = (req, res, next) => {
@@ -17,7 +18,7 @@ const validate = (req, res, next) => {
 
 // Admin update order
 router.put(
-    '/orders/:orderId',
+    '/:orderId',
     [
         param('orderId').isMongoId().withMessage('Invalid order ID'),
         body('shippingMethod').optional().notEmpty().withMessage('Shipping method cannot be empty'),
@@ -34,18 +35,20 @@ router.put(
         body('refund.refundedAt').optional().isISO8601().withMessage('Refunded date must be valid'),
     ],
     validate,
+    isAdmin,
     adminUpdateOrder
 );
 
 // Get all orders (admin)
 router.get(
-    '/orders',
+    '',
     [
         query('status').optional().isIn(['pending', 'processing', 'shipped', 'cancelled', 'completed']).withMessage('Invalid status'),
         query('startDate').optional().isISO8601().withMessage('Start date must be a valid date'),
         query('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
     ],
     validate,
+    isAdmin,
     getAllOrders
 );
 

@@ -245,7 +245,7 @@ exports.getOrdersById = async (req, res) => {
             path: "products.product",
             model: "Product",
             select: "title description images category",
-        });;
+        });
 
         return res.status(200).json({ message: "Orders retrieved successfully", orders });
     } catch (error) {

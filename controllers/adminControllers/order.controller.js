@@ -76,7 +76,12 @@ exports.getAllOrders = async (req, res) => {
             if (endDate) query.createdAt.$lte = new Date(endDate);
         }
 
-        const orders = await Order.find(query).sort({ createdAt: -1 });
+        const orders = await Order.find(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
+        .populate({
+            path: "products.product",
+            model: "Product",
+            select: "title description images category",
+        });
 
         return res.status(200).json({ message: "All orders retrieved successfully", orders });
     } catch (error) {

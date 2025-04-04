@@ -11,6 +11,7 @@ const adminProducts = require("./routes/adminRoutes/products.routes");
 const userProducts = require("./routes/userRoutes/products.routes");
 const orderRoutes = require("./routes/userRoutes/orderRoutes");
 const couponRoutes = require("./routes/adminRoutes/couponRoutes");
+const adminOrderRoutes = require("./routes/adminRoutes/orderRoutes");
 
 const PORT = process.env.PORT || 5000;
 const URL = process.env.MONGO_URI;
@@ -32,6 +33,7 @@ app.use("/api/admin/auth", adminAuth);
 app.use("/api/user/auth", userAuth);
 app.use("/api/admin/products", adminProducts);
 app.use("/api/user/products", userProducts);
+app.use("/api/admin/orders", adminOrderRoutes);
 app.use("/api/user/orders", orderRoutes);
 app.use("/api/discount-coupons", couponRoutes);
 
