@@ -3,7 +3,8 @@ const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const {
     adminUpdateOrder,
-    getAllOrders
+    getAllOrders,
+    getOrderById
 } = require('../../controllers/adminControllers/order.controller'); // Adjust path as needed
 const { isAdmin } = require('../../middleware/auth');
 
@@ -52,4 +53,13 @@ router.get(
     getAllOrders
 );
 
+router.get(
+    '/:orderId',
+    [
+        param('orderId').isMongoId().withMessage('Invalid order ID'),
+    ],
+    validate,
+    isAdmin,
+    getOrderById
+);
 module.exports = router;

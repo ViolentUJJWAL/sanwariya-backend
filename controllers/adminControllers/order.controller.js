@@ -90,3 +90,29 @@ exports.getAllOrders = async (req, res) => {
     }
 };
 
+exports.getOrderById = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        if (!orderId) {
+            return res.status(400).json({ message: "Order ID is required" });
+        }
+
+        const order = await Order.findById(orderId)
+            .populate("userId", "fullName email phoneNo")
+            .populate({
+                path: "products.product",
+                model: "Product",
+                select: "title description images category",
+            });
+
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        return res.status(200).json({ message: "Order fetched successfully", order });
+    } catch (error) {
+        console.error("Error fetching order by ID:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
