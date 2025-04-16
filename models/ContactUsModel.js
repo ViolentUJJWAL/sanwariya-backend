@@ -1,27 +1,29 @@
-import mongoose from 'mongoose';
-import UserSchema from './UserSchema';
+const mongoose = require('mongoose');
+
 const contactUsSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // assuming you have a User model
-    required: true,
+  name: {
+    type: String,
+    trim: true,
+    required: [true, "Name is required"],
+  },
+  email: {
+    type: String,
+    required: [true, "Email is required"],
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, "Email must be a valid email address"],
   },
   message: {
     type: String,
-    required: true,
+    required: [true, "Message is required"],
   },
   response: {
     type: String,
-    default: '', // empty by default
   },
   status: {
     type: String,
-    enum: ['pending', 'in-progress', 'resolved', 'closed'],
+    enum: ['pending', 'respond'],
     default: 'pending',
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
   },
   respondedAt: {
     type: Date,
@@ -29,5 +31,4 @@ const contactUsSchema = new mongoose.Schema({
 }, {timestamps:true});
 
 const ContactUs = mongoose.model('ContactUs', contactUsSchema);
-
 module.exports =  ContactUs;
