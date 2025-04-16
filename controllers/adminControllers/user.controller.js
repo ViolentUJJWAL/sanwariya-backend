@@ -3,9 +3,10 @@ const UserSchema = require("../../models/UserSchema");
 // GET /api/users?search=delhi&page=1&limit=10
 exports.getAllUsers = async (req, res) => {
     try {
+        console.log('req.query', req.query)
         const { search, isVerified, page = 1, limit = 20 } = req.query;
         const query = {};
-
+   
         // Filter by verification status
         if (isVerified !== undefined) {
             query.isVerified = isVerified === "true";
@@ -14,16 +15,22 @@ exports.getAllUsers = async (req, res) => {
         // Case-insensitive partial text search across fields including address
         if (search) {
             const regex = new RegExp(search, "i");
-            query.$or = [
+            const queryOr = [
                 { email: regex },
-                { phoneNo: regex },
                 { "fullName.firstName": regex },
                 { "fullName.lastName": regex },
                 { "address.city": regex },
                 { "address.pincode": regex },
                 { "address.state": regex },
             ];
+        
+            if (!isNaN(search)) {
+                queryOr.push({ phoneNo: Number(search) });
+            }
+        
+            query.$or = queryOr;
         }
+        
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
