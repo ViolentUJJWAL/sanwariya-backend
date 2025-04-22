@@ -90,7 +90,7 @@ const OrderSchema = new mongoose.Schema(
     status: {
       type: String,
       // enum: ["pending", "dispatch", "cancel", "delivered"],
-      enum: ["pending", "processing", "shipped", "cancelled", "completed"],
+      enum: ["pending", "processing", "shipped", "cancelled", "delivered"],
       required: [true, "Order status is required"],
       default: "pending"
     },
@@ -123,32 +123,39 @@ const OrderSchema = new mongoose.Schema(
 
 // Auto-generate a unique 10-digit orderNumber if not provided
 OrderSchema.pre("save", async function (next) {
-  console.log("save")
+  // Auto-generate orderNumber if not provided
   if (!this.orderNumber) {
     let isUnique = false;
     while (!isUnique) {
       const randomDigits = Math.floor(1000000000 + Math.random() * 9000000000);
       const orderNumber = `ORD-${randomDigits}`;
-      
       const existingOrder = await mongoose.model("Order").findOne({ orderNumber });
       if (!existingOrder) {
         this.orderNumber = orderNumber;
         isUnique = true;
       }
     }
-    console.log("save", this.orderNumber)
   }
-  
+
+  // Set estimated delivery date to 7 days later if not provided
   if (!this.estimatedDeliveryDate) {
     const currentDate = new Date();
     this.estimatedDeliveryDate = new Date(
       currentDate.setDate(currentDate.getDate() + 7)
-    ); // Default to 7 days later
-    console.log("save", this.estimatedDeliveryDate)
+    );
   }
+
+  // Handle discount and payableAmount calculation
+  const discountAmount = this.discount?.amount || 0;
+  const shippingCost = this.shipping?.cost || 0;
+  const totalAmount = this.totalAmount || 0;
+
+  const discountedAmount = Math.max(0, totalAmount - discountAmount);
+  this.payableAmount = discountedAmount + shippingCost;
 
   next();
 });
+
 
 const Order = mongoose.model("Order", OrderSchema);
 module.exports = Order;

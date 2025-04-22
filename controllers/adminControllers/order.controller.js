@@ -3,10 +3,18 @@ const Order = require("../../models/OrderModel");
 exports.adminUpdateOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { shippingMethod, trackingNumber, estimatedDeliveryDate, status, orderTracking, adminNote, refund } = req.body;
+        const {
+            shippingMethod,
+            trackingNumber,
+            estimatedDeliveryDate,
+            status,
+            orderTracking,
+            adminNote,
+            refund,
+            shippingCost, // <- optionally passed if needed
+        } = req.body;
 
-        // Validate order existence
-        const order = await Order.findById(orderId);
+        const order = await Order.findById(orderId).populate("userId");
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
@@ -21,23 +29,46 @@ exports.adminUpdateOrder = async (req, res) => {
                     return res.status(400).json({ message: "Each tracking entry must have dateAndTime and location" });
                 }
             }
-            order.orderTracking = orderTracking;
+            order.orderTrack = orderTracking;
         }
 
-        // Validate status
-        const validStatuses = ["pending", "processing", "shipped", "cancelled", "completed"];
+        const validStatuses = ["pending", "processing", "shipped", "cancelled", "completed", "delivered"];
         if (status && !validStatuses.includes(status)) {
             return res.status(400).json({ message: "Invalid order status" });
         }
-        if (status) order.status = status;
 
-        // Update allowed fields
+        if (status) {
+            order.status = status;
+
+            // When status is "processing", set shipping cost
+            if (status === "processing") {
+                if (typeof shippingCost !== "number") {
+                    return res.status(400).json({ message: "Shipping cost must be a number when status is 'processing'" });
+                }
+                order.shipping.cost = shippingCost;
+            }
+
+            // When status is "delivered", create payment entry
+            if (status === "delivered") {
+                const newPayment = new Payment({
+                    paymentBy: order.userId._id,
+                    paymentMethod: "cash", // Assuming default method, or modify as needed
+                    transactionId: `TXN-${Date.now()}`, // Generate unique txn ID
+                    amount: order.payableAmount, // Assuming this field exists in the order
+                    paymentStatus: "paid",
+                    transactionDateAndTime: new Date(),
+                });
+
+                await newPayment.save();
+            }
+        }
+
         if (shippingMethod) order.shipping.method = shippingMethod;
         if (trackingNumber) order.shipping.trackingNumber = trackingNumber;
         if (estimatedDeliveryDate) order.estimatedDeliveryDate = estimatedDeliveryDate;
         if (adminNote) order.adminNote = adminNote;
 
-        // Update refund details
+        // Refund update
         if (refund) {
             if (refund.isRefunded) order.refund.isRefunded = true;
             if (refund.amount) order.refund.amount = refund.amount;
@@ -45,7 +76,6 @@ exports.adminUpdateOrder = async (req, res) => {
             if (refund.isRefunded) order.refund.refundedAt = refund.refundedAt || new Date();
         }
 
-        // Save the updated order
         await order.save();
 
         return res.status(200).json({ message: "Order updated successfully by admin", order });
@@ -77,11 +107,11 @@ exports.getAllOrders = async (req, res) => {
         }
 
         const orders = await Order.find(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
-        .populate({
-            path: "products.product",
-            model: "Product",
-            select: "title description images category",
-        });
+            .populate({
+                path: "products.product",
+                model: "Product",
+                select: "title description images category",
+            });
 
         return res.status(200).json({ message: "All orders retrieved successfully", orders });
     } catch (error) {

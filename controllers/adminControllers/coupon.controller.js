@@ -109,41 +109,81 @@ exports.deleteCoupon = async (req, res) => {
 // Apply a coupon
 exports.applyCoupon = async (req, res) => {
     try {
-        const { code, totalAmount } = req.body;
+        const { code, products } = req.body;
+        // products: {product, totalPrice}
 
-        if (!code || !totalAmount) {
-            return handleError(res, 'Coupon code and total amount are required');
+        if (!code || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ message: 'Coupon code and products with totalPrice are required' });
         }
 
-        const coupon = await Coupon.findOne({ code, active: true });
-        if (!coupon) return handleError(res, 'Coupon not found or inactive', null, 404);
+        const coupon = await Coupon.findOne({ code: code.toUpperCase(), active: true });
 
+        if (!coupon) {
+            return res.status(404).json({ message: 'Coupon not found or inactive' });
+        }
+
+        // Check expiration
         if (coupon.expirationDate && coupon.expirationDate < new Date()) {
-            return handleError(res, 'Coupon has expired');
+            return res.status(400).json({ message: 'Coupon has expired' });
         }
 
+        // Check usage limit
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-            return handleError(res, 'Coupon usage limit reached');
+            return res.status(400).json({ message: 'Coupon usage limit reached' });
         }
 
-        if (totalAmount < coupon.minimumPurchase) {
-            return handleError(res, `Minimum purchase amount is ${coupon.minimumPurchase}`);
+        // Check customer eligibility
+        if (coupon.customerEligibility?.length > 0) {
+            const isEligible = coupon.customerEligibility.some(userId => userId.equals(req.user._id));
+            if (!isEligible) {
+                return res.status(403).json({ message: 'You are not eligible to use this coupon' });
+            }
         }
 
+        let eligibleTotal = 0;
+        const applicableProductIds = coupon.applicableProducts?.map(id => id.toString()) || [];
+
+        // If coupon has applicableProducts, filter products that match
+        if (applicableProductIds.length > 0) {
+            for (const item of products) {
+                if (applicableProductIds.includes(item.product)) {
+                    eligibleTotal += item.totalPrice;
+                }
+            }
+
+            if (eligibleTotal === 0) {
+                return res.status(400).json({ message: 'Coupon is not applicable to any of the selected products' });
+            }
+        } else {
+            // If no specific applicableProducts, apply on all
+            eligibleTotal = products.reduce((sum, item) => sum + item.totalPrice, 0);
+        }
+
+        // Check minimum purchase condition
+        if (eligibleTotal < coupon.minimumPurchase) {
+            return res.status(400).json({ message: `Minimum purchase amount is ${coupon.minimumPurchase}` });
+        }
+
+        // Calculate discount
         let discountAmount = 0;
         if (coupon.discountType === 'fixed') {
             discountAmount = coupon.discountValue;
         } else if (coupon.discountType === 'percentage') {
-            discountAmount = (totalAmount * coupon.discountValue) / 100;
+            discountAmount = (eligibleTotal * coupon.discountValue) / 100;
             if (coupon.maxDiscountAmount) {
                 discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
             }
         }
 
-        await coupon.save();
+        return res.status(200).json({
+            message: 'Coupon applied successfully',
+            discountAmount,
+            eligibleTotal,
+        });
 
-        res.status(200).json({ message: 'Coupon applied successfully', discountAmount });
     } catch (error) {
-        handleError(res, 'Failed to apply coupon', error, 500);
+        console.error('Error applying coupon:', error);
+        return res.status(500).json({ message: 'Failed to apply coupon' });
     }
 };
+

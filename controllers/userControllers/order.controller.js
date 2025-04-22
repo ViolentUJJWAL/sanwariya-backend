@@ -83,8 +83,7 @@ exports.placeOrder = async (req, res) => {
         let discountAmount = 0;
         let discount = undefined;
         if (discountCode) {
-
-            const coupon = await Coupon.findOne({ code: discountCode, active: true });
+            const coupon = await Coupon.findOne({ code: discountCode, active: true }).populate('applicableProducts').populate('customerEligibility');
             if (!coupon) return res.status(404).json({ message: 'Coupon not found or inactive' });
 
             if (coupon.expirationDate && coupon.expirationDate < new Date()) {
@@ -95,14 +94,38 @@ exports.placeOrder = async (req, res) => {
                 return res.status(400).json({ message: 'Coupon usage limit reached' });
             }
 
-            if (totalAmount < coupon.minimumPurchase) {
-                return res.status(201).json({ message: `Minimum purchase amount is ${coupon.minimumPurchase}` });
+            if (coupon.customerEligibility?.length > 0) {
+                const isEligible = coupon.customerEligibility.some(userId =>
+                    userId.toString() === req.user._id.toString()
+                );
+                if (!isEligible) {
+                    return res.status(403).json({ message: 'You are not eligible to use this coupon' });
+                }
             }
 
+            // Determine eligible products in the cart
+            let eligibleTotal = 0;
+            if (coupon.applicableProducts?.length > 0) {
+                for (const item of products) {
+                    if (coupon.applicableProducts.some(p => p._id.toString() === item.product.toString())) {
+                        eligibleTotal += item.totalPrice;
+                    }
+                }
+                if (eligibleTotal < coupon.minimumPurchase) {
+                    return res.status(400).json({ message: `Minimum purchase amount for eligible products is ${coupon.minimumPurchase}` });
+                }
+            } else {
+                if (totalAmount < coupon.minimumPurchase) {
+                    return res.status(400).json({ message: `Minimum purchase amount is ${coupon.minimumPurchase}` });
+                }
+                eligibleTotal = totalAmount;
+            }
+
+            // Calculate discount
             if (coupon.discountType === 'fixed') {
                 discountAmount = coupon.discountValue;
             } else if (coupon.discountType === 'percentage') {
-                discountAmount = (totalAmount * coupon.discountValue) / 100;
+                discountAmount = (eligibleTotal * coupon.discountValue) / 100;
                 if (coupon.maxDiscountAmount) {
                     discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
                 }
@@ -110,13 +133,15 @@ exports.placeOrder = async (req, res) => {
 
             coupon.usedCount += 1;
             await coupon.save();
+
             discount = {
                 code: discountCode,
                 amount: discountAmount
-            }
+            };
         }
 
-        let shippingCost = 50;
+
+        let shippingCost = 0;
 
         let payableAmount = (totalAmount - discountAmount) + shippingCost
 
@@ -222,11 +247,11 @@ exports.getUserOrders = async (req, res) => {
         }
 
         const orders = await Order.find(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
-        .populate({
-            path: "products.product",
-            model: "Product",
-            select: "title description images category",
-        });;
+            .populate({
+                path: "products.product",
+                model: "Product",
+                select: "title description images category",
+            });;
 
         return res.status(200).json({ message: "Orders retrieved successfully", orders });
     } catch (error) {
@@ -241,11 +266,11 @@ exports.getOrdersById = async (req, res) => {
         const query = { userId: req.user._id, _id: orderId };
 
         const orders = await Order.findOne(query).sort({ createdAt: -1 }).populate("userId", "fullName email phoneNo") // Populate user details (fetch name & email only)
-        .populate({
-            path: "products.product",
-            model: "Product",
-            select: "title description images category",
-        });
+            .populate({
+                path: "products.product",
+                model: "Product",
+                select: "title description images category",
+            });
 
         return res.status(200).json({ message: "Orders retrieved successfully", orders });
     } catch (error) {

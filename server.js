@@ -14,6 +14,7 @@ const couponRoutes = require("./routes/adminRoutes/couponRoutes");
 const adminOrderRoutes = require("./routes/adminRoutes/orderRoutes");
 const adminUsersRoutes = require("./routes/adminRoutes/user.routes");
 const contactUsRoutes = require("./routes/contactUsRoutes")
+const paymentRoutes = require("./routes/adminRoutes/payment.routes")
 const PORT = process.env.PORT || 5000;
 const URL = process.env.MONGO_URI;
 app.use(express.json());
@@ -39,6 +40,7 @@ app.use("/api/user/orders", orderRoutes);
 app.use("/api/discount-coupons", couponRoutes);
 app.use("/api/admin/users", adminUsersRoutes);
 app.use('/api/contact-us', contactUsRoutes);
+app.use('/api/admin/payment', paymentRoutes);
 
 app.listen(PORT, () => {
   connectDB(URL);
